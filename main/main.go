@@ -20,9 +20,11 @@ import (
 type LoginRequest struct {
 	Username string `json: "username"`
 	Password string `json: "password"`
+	Role     int    `json: "role"`
 }
 
 type Response struct {
+	Token   string `json:"token"`
 	Message string `json: "message"`
 }
 
@@ -37,6 +39,7 @@ type RegisterRequest struct {
 }
 
 type ProfileRequest struct {
+	Token string `json: "token"`
 	Email string `json: "email"`
 }
 
@@ -72,17 +75,20 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var loginRequest LoginRequest
 	json.Unmarshal(body, &loginRequest)
 
-	loginResult, err := userService.Login(loginRequest.Username, loginRequest.Password)
+	loginResult, err := userService.Login(loginRequest.Username, loginRequest.Password, loginRequest.Role)
 	if err != nil {
 		log.Println("Failed at login,   ", err)
 	}
 
 	var loginResponse Response
 
-	if !loginResult {
+	if len(loginResult) == 0 {
 		loginResponse.Message = "Login failed"
 	} else {
-		loginResponse.Message = "Login success"
+		loginResponse = Response{
+			Token:   loginResult,
+			Message: "Login Success",
+		}
 	}
 
 	json.NewEncoder(w).Encode(loginResponse)
@@ -141,11 +147,12 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	var profileRequest ProfileRequest
 	json.Unmarshal(body, &profileRequest)
 
-	profile, err := userService.ViewProfile(profileRequest.Email)
+	token := profileRequest.Token
+
+	profile, err := userService.ViewProfile(profileRequest.Email, token)
 	if err != nil {
 		log.Println("Failed to view profile,    ", err)
 	}
-
 	json.NewEncoder(w).Encode(profile)
 
 }

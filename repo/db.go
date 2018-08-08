@@ -9,14 +9,15 @@ import (
 )
 
 type userRepository struct {
-	conn            *sqlx.DB
-	findAllStmt     *sqlx.Stmt
-	findEmailStmt   *sqlx.Stmt
-	findMsisdnStmt  *sqlx.Stmt
-	findUsrnameStmt *sqlx.Stmt
-	findRoleStmt    *sqlx.Stmt
-	insertUser      *sqlx.NamedStmt
-	insertToRole    *sqlx.NamedStmt
+	conn              *sqlx.DB
+	findAllStmt       *sqlx.Stmt
+	findEmailStmt     *sqlx.Stmt
+	findMsisdnStmt    *sqlx.Stmt
+	findUsrnameStmt   *sqlx.Stmt
+	findRoleStmt      *sqlx.Stmt
+	findExactRoleStmt *sqlx.Stmt
+	insertUser        *sqlx.NamedStmt
+	insertToRole      *sqlx.NamedStmt
 }
 
 func (db *userRepository) MustPrepareStmt(query string) *sqlx.Stmt {
@@ -45,6 +46,7 @@ func NewRepository(db *sqlx.DB) UserRepository {
 	r.findEmailStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE email=?")
 	r.findUsrnameStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE username=?")
 	r.findRoleStmt = r.MustPrepareStmt("SELECT * FROM user_role WHERE user_id =?")
+	r.findExactRoleStmt = r.MustPrepareStmt("SELECT * FROM user_role WHERE user_id =? AND role=?")
 	r.insertUser = r.MustPrepareNamedStmt("INSERT INTO user_auth (id, email, msisdn, username, password, status) VALUES (:id, :email, :msisdn, :username, :password, :status)")
 	r.insertToRole = r.MustPrepareNamedStmt("INSERT INTO user_role (id, user_id, role) VALUES (:id, :user_id, :role)")
 	return &r
@@ -94,6 +96,14 @@ func (db *userRepository) FindUserRole(userID string) (userRole UserRole, err er
 	err = db.findRoleStmt.Get(&userRole, userID)
 	if err != nil {
 		log.Println("Error while finding user role,    ", err)
+	}
+	return
+}
+
+func (db *userRepository) FindExactRole(userID string, role int) (userRole UserRole, err error) {
+	err = db.findExactRoleStmt.Get(&userRole, userID, role)
+	if err != nil {
+		log.Println("Error at finding exat user role,    ", err)
 	}
 	return
 }

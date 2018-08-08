@@ -4,16 +4,34 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
+	"time"
 
 	"repo"
 
 	"github.com/bwmarrin/snowflake"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type userService struct {
 	userRepo repo.UserRepository
+}
+
+type Token struct {
+	jwt.StandardClaims
+	Role int `json:"role"`
+}
+
+var mySigningKey []byte
+
+func at(t time.Time, f func()) {
+	jwt.TimeFunc = func() time.Time {
+		return t
+	}
+	f()
+	jwt.TimeFunc = time.Now
 }
 
 // NewUserService create new instance of UserService implementation
@@ -32,22 +50,43 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func (s *userService) Login(username string, password string) (valid bool, err error) {
-	valid = true
-	result, err := s.userRepo.FindByUsername(username)
+func (s *userService) Login(username string, password string, role int) (token string, err error) {
+	mySigningKey := []byte("IDKWhatThisIs")
+
+	userData, err := s.userRepo.FindByUsername(username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Println(err)
 		} else {
-			log.Println("Error at Login", err)
+			log.Println("Error at finding user's data", err)
 		}
-		valid = false
 		return
 	}
 
-	match := CheckPasswordHash(password, result.Password)
+	match := CheckPasswordHash(password, userData.Password)
 	if !match {
-		valid = false
+		log.Println("Wrong password")
+	}
+
+	loginRole, err := s.userRepo.FindExactRole(userData.ID, role)
+	if len(loginRole.RoleID) == 0 {
+		log.Println("User has no such role")
+		return
+	}
+
+	claims := Token{
+		jwt.StandardClaims{
+			Subject:   userData.ID,
+			ExpiresAt: time.Now().Add(15 * time.Second).Unix(),
+		},
+		role,
+	}
+
+	signing := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, _ = signing.SignedString(mySigningKey)
+	if len(token) == 0 {
+		log.Println("Failed to generate token")
+		return
 	}
 
 	return
@@ -140,7 +179,20 @@ func (s *userService) Register(userRegister repo.User, role int) (registered boo
 	return
 }
 
-func (s *userService) ViewProfile(email string) (userProfile repo.User, err error) {
+func (s *userService) ViewProfile(email string, token string) (userProfile repo.User, err error) {
+	at(time.Unix(0, 0), func() {
+		tokenClaims, err := jwt.ParseWithClaims(token, &Token{}, func(tokenClaims *jwt.Token) (interface{}, error) {
+			return []byte("IDKWhatThisIs"), nil
+		})
+
+		if claims, _ := tokenClaims.Claims.(*Token); claims.ExpiresAt > time.Now().Unix() {
+			fmt.Printf("%v %v", claims.Role, claims.StandardClaims.ExpiresAt)
+		} else {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	})
+
 	reEmail := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	emailValid := reEmail.MatchString(email)
 	if !emailValid {
