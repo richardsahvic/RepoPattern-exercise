@@ -56,9 +56,9 @@ func main() {
 	userService = service.NewUserService(r)
 
 	route := mux.NewRouter()
-	route.HandleFunc("/login", LoginHandler).Methods("POST")
-	route.HandleFunc("/register", RegisterHandler).Methods("POST")
-	route.HandleFunc("/viewprofile", ProfileHandler).Methods("POST")
+	route.HandleFunc("/login", loginHandler).Methods("POST")
+	route.HandleFunc("/register", registerHandler).Methods("POST")
+	route.HandleFunc("/viewprofile", profileHandler).Methods("POST")
 
 	http.Handle("/", route)
 	log.Println("SERVER STARTED")
@@ -66,7 +66,7 @@ func main() {
 	http.ListenAndServe(":8080", route)
 }
 
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -94,7 +94,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(loginResponse)
 }
 
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
@@ -138,21 +138,28 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(registerResponse)
 }
 
-func ProfileHandler(w http.ResponseWriter, r *http.Request) {
+func profileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 
-	body, _ := ioutil.ReadAll(io.LimitReader(r.Body, 5000))
+	tokenHeader := r.Header.Get("token")
+	emailHeader := r.Header.Get("email")
 
 	var profileRequest ProfileRequest
-	json.Unmarshal(body, &profileRequest)
+	profileRequest.Token = tokenHeader
+	profileRequest.Email = emailHeader
 
-	token := profileRequest.Token
-
-	profile, err := userService.ViewProfile(profileRequest.Email, token)
+	profile, err := userService.ViewProfile(emailHeader, tokenHeader)
 	if err != nil {
 		log.Println("Failed to view profile,    ", err)
 	}
-	json.NewEncoder(w).Encode(profile)
 
+	_, err = json.Marshal(profile)
+	if err != nil {
+		log.Println("ERROR profile marshal,    ", err)
+	}
+
+	w.Header().Set("id", profile.ID)
+	w.Header().Set("email", profile.Email)
+	w.Header().Set("msisdn", profile.Msisdn)
+	w.Header().Set("username", profile.Username)
 }

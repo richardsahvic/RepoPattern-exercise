@@ -77,7 +77,7 @@ func (s *userService) Login(username string, password string, role int) (token s
 	claims := Token{
 		jwt.StandardClaims{
 			Subject:   userData.ID,
-			ExpiresAt: time.Now().Add(15 * time.Second).Unix(),
+			ExpiresAt: time.Now().Add(20 * time.Second).Unix(),
 		},
 		role,
 	}
@@ -186,7 +186,7 @@ func (s *userService) ViewProfile(email string, token string) (userProfile repo.
 		})
 
 		if claims, _ := tokenClaims.Claims.(*Token); claims.ExpiresAt > time.Now().Unix() {
-			fmt.Printf("%v %v", claims.Role, claims.StandardClaims.ExpiresAt)
+			fmt.Println(claims.Role, claims.StandardClaims.Subject)
 		} else {
 			fmt.Println(err)
 			os.Exit(1)
