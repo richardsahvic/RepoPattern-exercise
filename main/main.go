@@ -24,7 +24,6 @@ type LoginRequest struct {
 }
 
 type Response struct {
-	Token   string `json:"token"`
 	Message string `json: "message"`
 }
 
@@ -68,7 +67,6 @@ func main() {
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 
 	body, _ := ioutil.ReadAll(io.LimitReader(r.Body, 5000))
 
@@ -85,13 +83,16 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if len(loginResult) == 0 {
 		loginResponse.Message = "Login failed"
 	} else {
-		loginResponse = Response{
-			Token:   loginResult,
-			Message: "Login Success",
-		}
+		loginResponse.Message = "Login Success"
 	}
 
-	json.NewEncoder(w).Encode(loginResponse)
+	js, err := json.Marshal(loginResponse)
+	if err != nil {
+		log.Println("ERROR at login marshal,    ", err)
+	}
+
+	w.Header().Set("token", loginResult)
+	w.Write(js)
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -144,22 +145,12 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 	tokenHeader := r.Header.Get("token")
 	emailHeader := r.Header.Get("email")
 
-	var profileRequest ProfileRequest
-	profileRequest.Token = tokenHeader
-	profileRequest.Email = emailHeader
-
 	profile, err := userService.ViewProfile(emailHeader, tokenHeader)
 	if err != nil {
 		log.Println("Failed to view profile,    ", err)
 	}
 
-	_, err = json.Marshal(profile)
-	if err != nil {
-		log.Println("ERROR profile marshal,    ", err)
-	}
+	profile.Password = "-"
 
-	w.Header().Set("id", profile.ID)
-	w.Header().Set("email", profile.Email)
-	w.Header().Set("msisdn", profile.Msisdn)
-	w.Header().Set("username", profile.Username)
+	json.NewEncoder(w).Encode(profile)
 }
