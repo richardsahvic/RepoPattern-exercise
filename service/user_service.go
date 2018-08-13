@@ -19,6 +19,7 @@ type userService struct {
 	userRepo repo.UserRepository
 }
 
+// Token is a struct made to generate token
 type Token struct {
 	jwt.StandardClaims
 	Role int `json:"role"`
@@ -77,7 +78,7 @@ func (s *userService) Login(username string, password string, role int) (token s
 	claims := Token{
 		jwt.StandardClaims{
 			Subject:   userData.ID,
-			ExpiresAt: time.Now().Add(20 * time.Second).Unix(),
+			ExpiresAt: time.Now().Add(15 * time.Second).Unix(),
 		},
 		role,
 	}

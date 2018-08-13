@@ -8,13 +8,13 @@ import (
 	"log"
 	"net/http"
 
+	"datasource"
 	"repo"
 	"service"
 
 	"github.com/bwmarrin/snowflake"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
 
 type loginRequest struct {
@@ -40,10 +40,7 @@ type registerRequest struct {
 var userService service.UserService
 
 func main() {
-	db, err := sqlx.Connect("mysql", "dev:dev@(localhost:3306)/myapp?parseTime=true")
-	if err != nil {
-		log.Fatalln("Failed to connect to database,    ", err)
-	}
+	db := datasource.InitConnection()
 
 	r := repo.NewRepository(db)
 
