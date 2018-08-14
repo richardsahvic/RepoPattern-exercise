@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -34,23 +33,21 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	loginResult, err := userService.Login(loginReq.Username, loginReq.Password, loginReq.Role)
 	if err != nil {
 		log.Println("Failed at login,   ", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	var loginResp request.Response
 
 	if len(loginResult) == 0 {
 		loginResp.Message = "Login failed"
+		w.WriteHeader(http.StatusUnauthorized)
 	} else {
 		loginResp.Message = "Login Success"
 	}
 
-	js, err := json.Marshal(loginResp)
-	if err != nil {
-		log.Println("ERROR at login marshal,    ", err)
-	}
-
 	w.Header().Set("token", loginResult)
-	w.Write(js)
+	json.NewEncoder(w).Encode(loginResp)
 }
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +61,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	node, err := snowflake.NewNode(1)
 	if err != nil {
-		fmt.Println("Fail to generate snowflake id,    ", err)
+		log.Println("Fail to generate snowflake id,    ", err)
 		return
 	}
 
@@ -105,9 +102,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	profile, err := userService.ViewProfile(tokenHeader)
 	if err != nil {
 		log.Println("Failed to view profile,    ", err)
+		w.WriteHeader(401)
 	}
 
-	profile.Password = "*"
+	profile.Password = "secret"
 
 	json.NewEncoder(w).Encode(profile)
 }

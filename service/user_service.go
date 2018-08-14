@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"time"
 
@@ -67,6 +66,8 @@ func (s *userService) Login(username string, password string, role int) (token s
 	match := CheckPasswordHash(password, userData.Password)
 	if !match {
 		log.Println("Wrong password")
+		// w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	loginRole, err := s.userRepo.FindExactRole(userData.ID, role)
@@ -78,7 +79,7 @@ func (s *userService) Login(username string, password string, role int) (token s
 	claims := Token{
 		jwt.StandardClaims{
 			Subject:   userData.ID,
-			ExpiresAt: time.Now().Add(15 * time.Second).Unix(),
+			ExpiresAt: time.Now().Add(20 * time.Second).Unix(),
 		},
 		role,
 	}
@@ -189,10 +190,9 @@ func (s *userService) ViewProfile(token string) (userProfile repo.User, err erro
 
 		if claims, _ := tokenClaims.Claims.(*Token); claims.ExpiresAt > time.Now().Unix() {
 			id = claims.StandardClaims.Subject
-			fmt.Println(claims.Role, claims.StandardClaims.Subject)
+			fmt.Println(claims.Role, claims.Subject)
 		} else {
-			fmt.Println(err)
-			os.Exit(1)
+			fmt.Println("token Invalid,    ", err)
 		}
 	})
 
