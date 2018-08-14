@@ -180,13 +180,15 @@ func (s *userService) Register(userRegister repo.User, role int) (registered boo
 	return
 }
 
-func (s *userService) ViewProfile(email string, token string) (userProfile repo.User, err error) {
+func (s *userService) ViewProfile(token string) (userProfile repo.User, err error) {
+	var id string
 	at(time.Unix(0, 0), func() {
 		tokenClaims, err := jwt.ParseWithClaims(token, &Token{}, func(tokenClaims *jwt.Token) (interface{}, error) {
 			return []byte("IDKWhatThisIs"), nil
 		})
 
 		if claims, _ := tokenClaims.Claims.(*Token); claims.ExpiresAt > time.Now().Unix() {
+			id = claims.StandardClaims.Subject
 			fmt.Println(claims.Role, claims.StandardClaims.Subject)
 		} else {
 			fmt.Println(err)
@@ -194,13 +196,7 @@ func (s *userService) ViewProfile(email string, token string) (userProfile repo.
 		}
 	})
 
-	reEmail := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	emailValid := reEmail.MatchString(email)
-	if !emailValid {
-		return
-	}
-
-	userProfile, err = s.userRepo.FindByEmail(email)
+	userProfile, err = s.userRepo.FindByID(id)
 	if err != nil {
 		log.Println("Error at finding user's profile,	", err)
 	}

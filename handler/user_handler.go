@@ -101,14 +101,13 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	tokenHeader := r.Header.Get("token")
-	emailHeader := r.Header.Get("email")
 
-	profile, err := userService.ViewProfile(emailHeader, tokenHeader)
+	profile, err := userService.ViewProfile(tokenHeader)
 	if err != nil {
 		log.Println("Failed to view profile,    ", err)
 	}
 
-	profile.Password = "-"
+	profile.Password = "*"
 
 	json.NewEncoder(w).Encode(profile)
 }

@@ -11,6 +11,7 @@ import (
 type userRepository struct {
 	conn              *sqlx.DB
 	findAllStmt       *sqlx.Stmt
+	findIDStmt        *sqlx.Stmt
 	findEmailStmt     *sqlx.Stmt
 	findMsisdnStmt    *sqlx.Stmt
 	findUsrnameStmt   *sqlx.Stmt
@@ -42,6 +43,7 @@ func (db *userRepository) MustPrepareNamedStmt(query string) *sqlx.NamedStmt {
 func NewRepository(db *sqlx.DB) UserRepository {
 	r := userRepository{conn: db}
 	r.findAllStmt = r.MustPrepareStmt("SELECT * FROM user_auth")
+	r.findIDStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE id=?")
 	r.findMsisdnStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE msisdn=?")
 	r.findEmailStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE email=?")
 	r.findUsrnameStmt = r.MustPrepareStmt("SELECT * FROM user_auth WHERE username=?")
@@ -56,6 +58,15 @@ func (db *userRepository) FindProfiles() (usr []User, err error) {
 	err = db.findAllStmt.Select(&usr)
 	if err != nil {
 		log.Println("Error at finding profiles,    ", err)
+	}
+	return
+}
+
+func (db *userRepository) FindByID(id string) (usr User, err error) {
+	err = db.findIDStmt.Get(&usr, id)
+	if err != nil {
+		log.Printf("ID: %v , doesn't exist", id)
+		log.Println(err)
 	}
 	return
 }
