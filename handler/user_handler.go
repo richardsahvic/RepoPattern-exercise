@@ -62,6 +62,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	node, err := snowflake.NewNode(1)
 	if err != nil {
 		log.Println("Fail to generate snowflake id,    ", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -81,6 +82,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	registerResult, err := userService.Register(userRegister, role)
 	if err != nil {
 		log.Println("failed to register,    ", err)
+		w.WriteHeader(http.StatusNotAcceptable)
 	}
 
 	var regResponse request.Response
@@ -89,6 +91,8 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		regResponse.Message = "Register failed"
 	} else {
 		regResponse.Message = "Register success"
+		json.NewEncoder(w).Encode(regResponse)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 	json.NewEncoder(w).Encode(regResponse)
